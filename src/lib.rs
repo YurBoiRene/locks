@@ -18,7 +18,7 @@ pub trait LockLevelBelow<HigherLock: LockLevel> {}
 pub trait Locks<Lock: LockLevel> {
     fn locks<T, F>(&mut self, other: &Lock, cb: F) -> T
     where
-        F: FnOnce(Handle<Lock>, &mut Lock::Data) -> T;
+        F: FnOnce(&mut Handle<Lock>, &mut Lock::Data) -> T;
 }
 
 // Use *const to force Handle to not implement Send/Sync
@@ -46,24 +46,24 @@ where
 {
     fn locks<T, F>(&mut self, child: &LowerLock, cb: F) -> T
     where
-        F: FnOnce(Handle<LowerLock>, &mut LowerLock::Data) -> T,
+        F: FnOnce(&mut Handle<LowerLock>, &mut LowerLock::Data) -> T,
     {
-        let handle = unsafe { Handle::new(child) };
+        let mut handle = unsafe { Handle::new(child) };
         let mut guard = unsafe { child.lock() }.unwrap(); // TODO: Error handling
-        cb(handle, &mut guard)
+        cb(&mut handle, &mut guard)
     }
 }
 
 pub fn spawn<F, T, BaseLock>(base: Arc<BaseLock>, f: F) -> JoinHandle<T>
 where
     BaseLock: LockLevel + Send + Sync + 'static,
-    F: FnOnce(Handle<BaseLock>) -> T + Send + 'static,
+    F: FnOnce(&mut Handle<BaseLock>) -> T + Send + 'static,
     T: Send + 'static,
 {
     thread::spawn(move || {
-        let handle = unsafe { Handle::new(&*base) };
+        let mut handle = unsafe { Handle::new(&*base) };
 
-        f(handle)
+        f(&mut handle)
     })
 }
 

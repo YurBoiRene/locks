@@ -17,15 +17,21 @@ fn main() {
     let a_clone = Arc::clone(&a);
     let b_clone = Arc::clone(&b);
 
-    spawn(s, move |mut s_hdl| loop {
-        s_hdl.locks(&*a, |mut a_hdl, a_data| {
-            a_hdl.locks(&*b, |_, b_data| println!("{a_data}, {b_data}"));
+    spawn(s, move |s_hdl| loop {
+        s_hdl.locks(&*a, |a_hdl, a_data| {
+            a_hdl.locks(&*b, |_, b_data| {
+                *a_data += 1;
+                println!("{a_data}, {b_data}");
+            });
         });
     });
 
-    spawn(s_clone, move |mut s_hdl| loop {
-        s_hdl.locks(&*a_clone, |mut a_hdl, a_data| {
-            a_hdl.locks(&*b_clone, |_, b_data| println!("{a_data}, {b_data}"));
+    spawn(s_clone, move |s_hdl| loop {
+        s_hdl.locks(&*a_clone, |a_hdl, a_data| {
+            a_hdl.locks(&*b_clone, |_, b_data| {
+                *b_data += 1;
+                println!("{a_data}, {b_data}");
+            });
         });
     })
     .join()

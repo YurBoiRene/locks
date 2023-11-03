@@ -24,19 +24,25 @@ fn main() {
     //     });
     // });
 
-    let scam = spawn(s, move |mut s_hdl| {
-        s_hdl.locks(&*a, |mut a_hdl, a_data| {
+    spawn(s, move |s_hdl| loop {
+        let mut scam: Option<&mut Handle<A<i32>>> = None;
+        s_hdl.locks(&*a, |a_hdl, a_data| {
             a_hdl.locks(&*b, |_, b_data| {
                 println!("{a_data}, {b_data}");
             });
+            scam = Some(a_hdl);
         });
-        s_hdl
-    })
-    .join()
-    .unwrap();
 
-    spawn(s_clone, move |mut s_hdl| loop {
-        s_hdl.locks(&*a_clone, |mut a_hdl, a_data| {
+        scam.unwrap().locks(&*b, |b_hdl, b_data| {
+            println!("Wacko");
+            s_hdl.locks(&*a, |a_hdl, a_data| {
+                println!("Wacko2");
+            })
+        });
+    });
+
+    spawn(s_clone, move |s_hdl| loop {
+        s_hdl.locks(&*a_clone, |a_hdl, a_data| {
             a_hdl.locks(&*b_clone, |_, b_data| {
                 println!("{a_data}, {b_data}");
             });
