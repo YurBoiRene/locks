@@ -1,6 +1,6 @@
 use std::{
     marker::PhantomData,
-    sync::{PoisonError, TryLockError},
+    sync::Arc,
     thread::{self, JoinHandle},
 };
 
@@ -21,7 +21,8 @@ pub trait Locks<Lock: LockLevel> {
         F: FnOnce(Handle<Lock>, &mut Lock::Data) -> T;
 }
 
-pub struct Handle<T>(PhantomData<T>);
+// Use *const to force Handle to not implement Send/Sync
+pub struct Handle<T>(PhantomData<*const T>);
 
 impl<T: LockLevel> Handle<T> {
     pub unsafe fn new(_: &T) -> Self {
@@ -53,15 +54,17 @@ where
     }
 }
 
-pub fn spawn<F, T, BaseLock>(base: &BaseLock, f: F) -> JoinHandle<T>
+pub fn spawn<F, T, BaseLock>(base: Arc<BaseLock>, f: F) -> JoinHandle<T>
 where
-    BaseLock: LockLevel + Send + 'static,
+    BaseLock: LockLevel + Send + Sync + 'static,
     F: FnOnce(Handle<BaseLock>) -> T + Send + 'static,
     T: Send + 'static,
 {
-    let handle = unsafe { Handle::new(base) };
+    thread::spawn(move || {
+        let handle = unsafe { Handle::new(&*base) };
 
-    thread::spawn(|| f(handle))
+        f(handle)
+    })
 }
 
 // TODO: temporary
