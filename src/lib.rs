@@ -22,18 +22,11 @@ pub trait Locks<Lock: LockLevel> {
 }
 
 // Use *const to force Handle to not implement Send/Sync
+// TODO I don't think this is needed anymore now that
+//      Handles are passed as &mut
 pub struct Handle<T>(PhantomData<*const T>);
 
 impl<T: LockLevel> Handle<T> {
-    pub unsafe fn new(_: &T) -> Self {
-        Self(PhantomData)
-    }
-}
-
-#[must_use = "You must validate the integrity of the token"]
-pub struct Token<T>(PhantomData<T>);
-
-impl<T: LockLevel> Token<T> {
     pub unsafe fn new(_: &T) -> Self {
         Self(PhantomData)
     }
@@ -54,17 +47,50 @@ where
     }
 }
 
-pub fn spawn<F, T, BaseLock>(base: Arc<BaseLock>, f: F) -> JoinHandle<T>
+pub struct LockedJoinHandle<Level, T> {
+    join_handle: JoinHandle<T>,
+    level_handle: PhantomData<Handle<Level>>,
+}
+
+impl<Level: LockLevel, T> LockedJoinHandle<Level, T> {
+    pub fn new(_: &Level, join_handle: JoinHandle<T>) -> Self {
+        LockedJoinHandle {
+            join_handle,
+            level_handle: PhantomData,
+        }
+    }
+}
+
+pub trait Joinable<LevelHandle, T> {
+    fn join(self, handle: &mut Handle<LevelHandle>) -> std::thread::Result<T>;
+    unsafe fn raw_join(self) -> std::thread::Result<T>;
+}
+
+impl<HeldLevel, T> Joinable<HeldLevel, T> for LockedJoinHandle<HeldLevel, T>
+where
+    HeldLevel: LockLevel,
+{
+    fn join(self, _: &mut Handle<HeldLevel>) -> std::thread::Result<T> {
+        self.join_handle.join()
+    }
+    unsafe fn raw_join(self) -> std::thread::Result<T> {
+        self.join_handle.join()
+    }
+}
+
+pub fn spawn<F, T, BaseLock>(base: Arc<BaseLock>, f: F) -> LockedJoinHandle<BaseLock, T>
 where
     BaseLock: LockLevel + Send + Sync + 'static,
     F: FnOnce(&mut Handle<BaseLock>) -> T + Send + 'static,
     T: Send + 'static,
 {
-    thread::spawn(move || {
+    let base2 = Arc::clone(&base);
+    let join_handle = thread::spawn(move || {
         let mut handle = unsafe { Handle::new(&*base) };
 
         f(&mut handle)
-    })
+    });
+    LockedJoinHandle::new(&*base2, join_handle)
 }
 
 // TODO: temporary

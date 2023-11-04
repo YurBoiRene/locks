@@ -17,37 +17,44 @@ fn main() {
     let a_clone = Arc::clone(&a);
     let b_clone = Arc::clone(&b);
 
-    // let mut scam: Option<Handle<S<()>>> = None;
-    // spawn(&*s, move |mut s_hdl| loop {
-    //     s_hdl.locks(&*a, |mut a_hdl, a_data| {
-    //         a_hdl.locks(&*b, |_, b_data| println!("{a_data}, {b_data}"));
+    let s_clone2 = Arc::clone(&s);
+    let a_clone2 = Arc::clone(&a);
+    let b_clone2 = Arc::clone(&b);
+
+    // spawn(s, move |s_hdl| {
+    //     s_hdl.locks(&*a, |a_hdl, a_data| {
+    //         println!("a is locked: {a_data}");
+    //         spawn(a_clone, move |a_hdl2| loop {
+    //             a_hdl2.locks(&*b, |a_hdl, a_data| {
+    //                 println!("A is locked {a_data}");
+    //             });
+    //         })
+    //         .join(a_hdl);
     //     });
     // });
 
-    spawn(s, move |s_hdl| loop {
-        let mut scam: Option<&mut Handle<A<i32>>> = None;
+    spawn(s, move |s_hdl| {
         s_hdl.locks(&*a, |a_hdl, a_data| {
-            a_hdl.locks(&*b, |_, b_data| {
-                println!("{a_data}, {b_data}");
-            });
-            scam = Some(a_hdl);
-        });
-
-        scam.unwrap().locks(&*b, |b_hdl, b_data| {
-            println!("Wacko");
-            s_hdl.locks(&*a, |a_hdl, a_data| {
-                println!("Wacko2");
+            println!("a is locked: {a_data}");
+            spawn(a_clone, move |a_hdl2| loop {
+                a_hdl2.locks(&*b, |a_hdl, a_data| {
+                    println!("A is locked {a_data}");
+                });
             })
+            .join(a_hdl)
+            .unwrap();
         });
     });
 
-    spawn(s_clone, move |s_hdl| loop {
-        s_hdl.locks(&*a_clone, |a_hdl, a_data| {
-            a_hdl.locks(&*b_clone, |_, b_data| {
-                println!("{a_data}, {b_data}");
+    unsafe {
+        spawn(s_clone2, move |s_hdl| loop {
+            s_hdl.locks(&*a_clone2, |a_hdl, a_data| {
+                a_hdl.locks(&*b_clone2, |_, b_data| {
+                    println!("{a_data}, {b_data}");
+                });
             });
-        });
-    })
-    .join()
-    .unwrap()
+        })
+        .raw_join()
+        .unwrap()
+    }
 }

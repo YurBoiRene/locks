@@ -26,14 +26,16 @@ fn main() {
         });
     });
 
-    spawn(s_clone, move |s_hdl| loop {
-        s_hdl.locks(&*a_clone, |a_hdl, a_data| {
-            a_hdl.locks(&*b_clone, |_, b_data| {
-                *b_data += 1;
-                println!("{a_data}, {b_data}");
+    unsafe {
+        spawn(s_clone, move |s_hdl| loop {
+            s_hdl.locks(&*a_clone, |a_hdl, a_data| {
+                a_hdl.locks(&*b_clone, |_, b_data| {
+                    *b_data += 1;
+                    println!("{a_data}, {b_data}");
+                });
             });
-        });
-    })
-    .join()
-    .unwrap()
+        })
+        .raw_join()
+        .unwrap();
+    }
 }
