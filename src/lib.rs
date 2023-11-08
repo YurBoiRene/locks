@@ -1,6 +1,5 @@
 use std::{
     marker::PhantomData,
-    sync::Arc,
     thread::{self, JoinHandle},
 };
 
@@ -13,7 +12,7 @@ pub trait LockLevel {
     unsafe fn try_lock(&self) -> TryLockResult<MutexGuard<Self::Data>>;
 }
 
-pub trait LockLevelBelow<HigherLock: LockLevel> {}
+pub trait LockLevelBelow<HigherLock> {}
 
 pub trait Locks<Lock: LockLevel> {
     fn locks<T, F>(&mut self, other: &Lock, cb: F) -> T
@@ -21,12 +20,9 @@ pub trait Locks<Lock: LockLevel> {
         F: FnOnce(&mut Handle<Lock>, &mut Lock::Data) -> T;
 }
 
-// Use *const to force Handle to not implement Send/Sync
-// TODO I don't think this is needed anymore now that
-//      Handles are passed as &mut
-pub struct Handle<T>(PhantomData<*const T>);
+pub struct Handle<T>(PhantomData<T>);
 
-impl<T: LockLevel> Handle<T> {
+impl<T> Handle<T> {
     pub unsafe fn new(_: &T) -> Self {
         Self(PhantomData)
     }
@@ -34,7 +30,6 @@ impl<T: LockLevel> Handle<T> {
 
 impl<HigherLock, LowerLock> Locks<LowerLock> for Handle<HigherLock>
 where
-    HigherLock: LockLevel,
     LowerLock: LockLevel + LockLevelBelow<HigherLock>,
 {
     fn locks<T, F>(&mut self, child: &LowerLock, cb: F) -> T
@@ -49,49 +44,35 @@ where
 
 pub struct LockedJoinHandle<Level, T> {
     join_handle: JoinHandle<T>,
-    level_handle: PhantomData<Handle<Level>>,
+    level_handle: PhantomData<Level>,
 }
 
-impl<Level: LockLevel, T> LockedJoinHandle<Level, T> {
+impl<Level, T> LockedJoinHandle<Level, T> {
     pub fn new(_: &Level, join_handle: JoinHandle<T>) -> Self {
         LockedJoinHandle {
             join_handle,
             level_handle: PhantomData,
         }
     }
-}
 
-pub trait Joinable<LevelHandle, T> {
-    fn join(self, handle: &mut Handle<LevelHandle>) -> std::thread::Result<T>;
-    unsafe fn raw_join(self) -> std::thread::Result<T>;
-}
-
-impl<HeldLevel, T> Joinable<HeldLevel, T> for LockedJoinHandle<HeldLevel, T>
-where
-    HeldLevel: LockLevel,
-{
-    fn join(self, _: &mut Handle<HeldLevel>) -> std::thread::Result<T> {
-        self.join_handle.join()
-    }
-    unsafe fn raw_join(self) -> std::thread::Result<T> {
+    pub fn join(self, _: &mut Handle<Level>) -> std::thread::Result<T> {
         self.join_handle.join()
     }
 }
 
-pub fn spawn<F, T, BaseLock>(base: Arc<BaseLock>, f: F) -> LockedJoinHandle<BaseLock, T>
+pub fn spawn<F, T, BaseLock>(base: &BaseLock, f: F) -> LockedJoinHandle<BaseLock, T>
 where
-    BaseLock: LockLevel + Send + Sync + 'static,
     F: FnOnce(&mut Handle<BaseLock>) -> T + Send + 'static,
     T: Send + 'static,
 {
-    let base2 = Arc::clone(&base);
-    let join_handle = thread::spawn(move || {
-        let mut handle = unsafe { Handle::new(&*base) };
-
+    let join_hdl = thread::spawn(move || {
+        let mut handle = Handle(PhantomData::<BaseLock>);
         f(&mut handle)
     });
-    LockedJoinHandle::new(&*base2, join_handle)
+    LockedJoinHandle::new(base, join_hdl)
 }
+
+pub struct MainLevel;
 
 // TODO: temporary
 #[macro_export]
@@ -120,5 +101,7 @@ macro_rules! define_level {
                 self.mutex.try_lock()
             }
         }
+
+        impl<T> LockLevelBelow<MainLevel> for $name<T> {}
     };
 }
