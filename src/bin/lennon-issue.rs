@@ -1,7 +1,6 @@
 use locks::*;
 use std::sync::Arc;
 
-define_level!(S);
 define_level!(A);
 impl<T, U> LockLevelBelow<S<T>> for A<U> {}
 define_level!(B);
