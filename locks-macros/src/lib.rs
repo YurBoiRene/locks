@@ -35,6 +35,10 @@ pub fn main(_args: TokenStream, input: TokenStream) -> TokenStream {
         .expect("Expected identifier.")
         .unwrap_or(syn::Ident::new("main", Span::call_site()));
 
+    // Check that macro is on function named "main"
+    if &fn_item.sig.ident.to_string() != "main" {
+        panic!("Expected main function.");
+    }
     // Insert code to get main handle first ("unsafe")
     fn_item.block.stmts.insert(
         0,
