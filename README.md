@@ -24,6 +24,7 @@ use locks::prelude::*;
 fn main() {
     let main = &mut unsafe { Handle::new(&MainLevel) };
 
+    // Rest of main...
 }
 ```
 
