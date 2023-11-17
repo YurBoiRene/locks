@@ -43,8 +43,8 @@ impl CombinedAccount {
     }
 
     fn credit_check(&self) -> usize {
-        let mut savings = self.savings.lock().unwrap();
-        let mut checking = self.checking.lock().unwrap();
+        let savings = self.savings.lock().unwrap();
+        let checking = self.checking.lock().unwrap();
         checking.balance() + savings.balance()
     }
 }

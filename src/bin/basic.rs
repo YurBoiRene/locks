@@ -16,7 +16,7 @@ fn main() {
 
     let t1 = spawn(&MainLevel, move |hdl| loop {
         hdl.with(&*a, |hdl, a_data| {
-            hdl.with(&*b, |hdl, b_data| {
+            hdl.with(&*b, |_: &mut Handle<B<i32>>, b_data| {
                 *a_data += 1;
                 println!("t1: {a_data}, {b_data}");
             });
@@ -25,7 +25,7 @@ fn main() {
 
     let t2 = spawn(&MainLevel, move |hdl| loop {
         hdl.with(&*a_clone, |hdl, a_data| {
-            hdl.with(&*b_clone, |hdl, b_data| {
+            hdl.with(&*b_clone, |_, b_data| {
                 *b_data += 1;
                 println!("t2: {a_data}, {b_data}");
             })
