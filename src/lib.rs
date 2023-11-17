@@ -1,3 +1,5 @@
+#![doc = include_str!("../README.md")]
+
 use std::{
     marker::PhantomData,
     sync::{LockResult, MutexGuard},
@@ -6,7 +8,7 @@ use std::{
 
 pub mod prelude {
     pub use super::{
-        define_level, order_level, Handle, LockLevel, LockLevelBelow, LockedJoinHandle, Locks,
+        define_level, order_level, Handle, LockLevelBelow, LockedJoinHandle, Locks,
         MainLevel,
     };
 }
@@ -181,6 +183,7 @@ macro_rules! define_level {
 ///         });
 ///     });
 /// }
+/// ```
 #[macro_export]
 macro_rules! order_level {
     ($lhs:ident < $rhs:ident) => {

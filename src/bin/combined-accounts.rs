@@ -1,4 +1,4 @@
-use locks::*;
+use locks::prelude::*;
 use std::sync::Arc;
 
 define_level!(CheckingLock);
