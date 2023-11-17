@@ -8,7 +8,7 @@ use std::{
 
 pub mod prelude {
     pub use super::{
-        define_level, order_level, Handle, LockLevelBelow, LockedJoinHandle, Locks,
+        define_level, order_level, spawn, Handle, LockLevelBelow, LockedJoinHandle, Locks,
         MainLevel,
     };
 }
