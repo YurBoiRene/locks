@@ -14,16 +14,15 @@ For information on each example, check out the doc at the top of the file.
 
 ## Programming Model/How to Use
 
-First, a special main function is needed to give us our `MainLevel` handle. The `MainLevel` handle (here called `main`) is the highest "lock" possible (can lock any lock level) and holds no data. It will be used to lock lower locks containing data and join spawned threads that utilize locks.
+First, a special main function is needed to give us our `MainLevel` handle. The `MainLevel` handle is the highest "lock" possible (can lock any lock level) and holds no data. It will be used to lock lower locks containing data and join spawned threads that utilize locks.
 
-In the future the unsafe call will be replaced with an attribute similar to [Tokio's main attribute](https://docs.rs/tokio/latest/tokio/attr.main.html) but for now this incantation should be used.
+The `locks::main` attribute adds the `MainLevel` handle variable `main` to the scope.
 
 ```rust
 use locks::prelude::*;
 
+#[locks::main]
 fn main() {
-    let main = &mut unsafe { Handle::new(&MainLevel) };
-
     // Rest of main...
 }
 ```
