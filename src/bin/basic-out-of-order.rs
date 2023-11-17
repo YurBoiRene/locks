@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 define_level!(A);
 define_level!(B);
-impl<T, U> LockLevelBelow<A<T>> for B<U> {}
+order_level!(B < A);
 
 fn main() {
     let main = &mut unsafe { Handle::new(&MainLevel) }; // TODO
@@ -15,8 +15,8 @@ fn main() {
     let b_clone = Arc::clone(&b);
 
     let t1 = spawn(&MainLevel, move |hdl| loop {
-        hdl.locks(&*a, |hdl, a_data| {
-            hdl.locks(&*b, |hdl, b_data| {
+        hdl.with(&*a, |hdl, a_data| {
+            hdl.with(&*b, |hdl, b_data| {
                 *a_data += 1;
                 println!("t1: {a_data}, {b_data}");
             });
@@ -24,8 +24,8 @@ fn main() {
     });
 
     let t2 = spawn(&MainLevel, move |hdl| loop {
-        hdl.locks(&*a_clone, |hdl, a_data| {
-            hdl.locks(&*b_clone, |hdl, b_data| {
+        hdl.with(&*b_clone, |hdl, a_data| {
+            hdl.with(&*a_clone, |hdl, b_data| {
                 *b_data += 1;
                 println!("t2: {a_data}, {b_data}");
             })

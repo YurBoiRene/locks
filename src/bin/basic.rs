@@ -1,35 +1,37 @@
 use locks::*;
-use std::{sync::Arc, thread, ops::Deref};
+use std::sync::Arc;
 
 define_level!(A);
 define_level!(B);
-impl<T, U> LockLevelBelow<A<T>> for B<U> {}
+order_level!(B < A);
 
 fn main() {
+    let main = &mut unsafe { Handle::new(&MainLevel) }; // TODO
+
     let a = Arc::new(A::new(10));
     let b = Arc::new(B::new(2));
 
     let a_clone = Arc::clone(&a);
     let b_clone = Arc::clone(&b);
 
-    thread::spawn(move || loop {
-        baselock!(let (a_hdl, a_val) = lock(&*a_clone).unwrap());
-        let (_, b_val) = a_hdl.lock(&*b_clone).unwrap();
-
-        println!("t1 {a_val} {b_val}");
+    let t1 = spawn(&MainLevel, move |hdl| loop {
+        hdl.with(&*a, |hdl, a_data| {
+            hdl.with(&*b, |hdl, b_data| {
+                *a_data += 1;
+                println!("t1: {a_data}, {b_data}");
+            });
+        });
     });
 
-    thread::spawn(move || loop {
-        // No deadlock!)
-        baselock!(let (a_hdl, a_val) = lock(&*a).unwrap());
-        let (_, b_val) = a_hdl.lock(&*b).unwrap();
+    let t2 = spawn(&MainLevel, move |hdl| loop {
+        hdl.with(&*a_clone, |hdl, a_data| {
+            hdl.with(&*b_clone, |hdl, b_data| {
+                *b_data += 1;
+                println!("t2: {a_data}, {b_data}");
+            })
+        })
+    });
 
-        // Deadlock, but no compile!
-        // baselock!(let (b_hdl, b_val) = lock(&*b).unwrap());
-        // let (_, a_val) = b_hdl.lock(&*a).unwrap();
-
-        println!("t2 {a_val} {b_val}");
-    })
-    .join()
-    .unwrap();
+    t1.join(main).unwrap();
+    t2.join(main).unwrap();
 }
