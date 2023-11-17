@@ -15,7 +15,7 @@ pub trait LockLevel {
 pub trait LockLevelBelow<HigherLock> {}
 
 pub trait Locks<Lock: LockLevel> {
-    fn locks<T, F>(&mut self, other: &Lock, cb: F) -> T
+    fn with<T, F>(&mut self, other: &Lock, cb: F) -> T
     where
         F: FnOnce(&mut Handle<Lock>, &mut Lock::Data) -> T;
 }
@@ -32,7 +32,7 @@ impl<HigherLock, LowerLock> Locks<LowerLock> for Handle<HigherLock>
 where
     LowerLock: LockLevel + LockLevelBelow<HigherLock>,
 {
-    fn locks<T, F>(&mut self, child: &LowerLock, cb: F) -> T
+    fn with<T, F>(&mut self, child: &LowerLock, cb: F) -> T
     where
         F: FnOnce(&mut Handle<LowerLock>, &mut LowerLock::Data) -> T,
     {
@@ -74,7 +74,6 @@ where
 
 pub struct MainLevel;
 
-// TODO: temporary
 #[macro_export]
 macro_rules! define_level {
     ($name:ident) => {
@@ -103,5 +102,12 @@ macro_rules! define_level {
         }
 
         impl<T> LockLevelBelow<MainLevel> for $name<T> {}
+    };
+}
+
+#[macro_export]
+macro_rules! order_level {
+    ($lhs:ident < $rhs:ident) => {
+        impl<T, U> LockLevelBelow<$rhs<T>> for $lhs<U> {}
     };
 }
