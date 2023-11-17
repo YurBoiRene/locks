@@ -2,15 +2,87 @@
 
 Deadlocks are a common problem in multiprocessing systems that occur when a thread of execution is waiting for the lock of a resource held by another thread of execution, which is in turn, waiting for a resource held by the first thread. For more information on deadlocks, we refer the reader to [Section 32.3 of *Operating Systems: Three Easy Pieces*](https://pages.cs.wisc.edu/~remzi/OSTEP/threads-bugs.pdf).
 
-Our work introduces a type system in Rust that enforces deadlock free execution from compile time.
+We introduce `locks`, a crate providing a lock types that ensure deadlock free execution verified at compile time. This is done by enforcing that each thread takes locks in a consistent ordering.
 
-To run an example (e.g. combined-accounts):
+Examples can be found in `src/bin/`. To run an example (e.g. combined-accounts):
 
 ```sh
 cargo run --bin combined-accounts
 ```
 
 For information on each example, check out the doc at the top of the file.
+
+## Programming Model/How to Use
+
+First, a special main function is needed to give us our `MainLevel` handle. The `MainLevel` handle (here called `main`) is the highest "lock" possible (can lock any lock level) and holds no data. It will be used to lock lower locks containing data and join spawned threads that utilize locks.
+
+In the future the unsafe call will be replaced with an attribute similar to [Tokio's main attribute](https://docs.rs/tokio/latest/tokio/attr.main.html) but for now this incantation should be used.
+
+```rust
+use locks::prelude::*;
+
+fn main() {
+    let main = &mut unsafe { Handle::new(&MainLevel) };
+
+}
+```
+
+Then we declare a set of locks with a total order.
+
+```rust
+define_level!(A);
+define_level!(B);
+order_level!(B < A);
+```
+
+We can then make new locks containing the accessed data. We also wrap them in Arcs to clone and send them to spawned threads.
+
+```rust
+let a = Arc::new(A::new(10));
+let b = Arc::new(B::new(2));
+
+let a_clone = Arc::clone(&a);
+let b_clone = Arc::clone(&b);
+```
+
+To extract data from a lock we can use the `with` function implemented on handles. Given a lock level **below** the held handle with a closure, `with` will run the closure with a handle to the taken lock and a mutable reference to its held data.
+
+```rust
+main.with(&*a, |a_hdl, a_data| {
+    // Do stuff with a's data
+    *a_data += 1;
+});
+```
+
+You can also take any lock below the handle's lock.
+
+```rust
+main.with(&*a, |a_hdl, a_data| { *a_data += 1 }); // Fine
+main.with(&*b, |b_hdl, b_data| { *b_data += 1 }); // Fine
+a.with(&*b, |b_hdl, b_data| { *b_data += 1 }); // Fine
+b.with(&*a, |a_hdl, a_data| { *a_data += 1 }); // Will not compile
+```
+
+Handles are always given as mutable references and so cannot be sent to threads directly. To solve this there is `spawn()`.
+
+To create a thread with the use of deadlock free locks use `spawn`. In this code snippet the thread `t1` is created with a level of `MainLevel`. This level information is kept in t1's type. `spawn` also gives a handle of the requested lock to the closure to lock locks below itself.
+
+```rust
+let t1 = spawn(&MainLevel, move |main_hdl| loop {
+    // Take locks in spawned thread
+    main.with(&*a, |a_hdl, a_data| { *a_data += 1 });
+
+    // Do more thread tasks...
+});
+```
+
+Threads in locks can be joined using `join` by passing a handle to the lock level of the thread.
+
+```rust
+t1.join(main).unwrap();
+```
+
+An important detail here is that a thread can be spawned with **any** lock level, no matter what locks are held. It is only on joining that the lock of the same level as the thread must be held.
 
 ## Previous Work
 
