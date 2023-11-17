@@ -1,3 +1,16 @@
+//! A buggy incorrect accounting example demonstrating two accounts
+//! (savings and checking) that deposit/withdraw/transfer asynchronously.
+//!
+//! This is a buggy implementation that does not use the locks library and
+//! instead uses standard mutex locks to facilitate asynchronous data access.
+//! Because the example violates the locking order, it may deadlock. Rust
+//! provides no guarantees for deadlock safety so the example compiles with
+//! no errors or warnings.
+//!
+//! See also
+//! - combined-accounts
+//! - combined-accounts-out-of-order
+//!
 use std::{
     sync::{Arc, Mutex},
     thread,

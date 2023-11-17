@@ -4,13 +4,13 @@ Deadlocks are a common problem in multiprocessing systems that occur when a thre
 
 Our work introduces a type system in Rust that enforces deadlock free execution from compile time.
 
-For a simple example of the library in action, check out `src/bin/combined-accounts*.rs`. The example features a combined account with two account (savings and checking) that need to deposit/withdraw/transfer asynchronously.
+To run an example (e.g. combined-accounts):
 
-`combined-accounts-deadlocks.rs` contains a buggy implementation without using our library. This implementation has a possibly of deadlocking.
+```sh
+cargo run --bin combined-accounts
+```
 
-`combined-accounts-out-of-order.rs` contains a buggy implementation written with our deadlock-free library. The library finds the locks taken out of order at build time and does not compile.
-
-`combined-accounts.rs` contains a bug-free implementation that does not deadlock. Locks are taken in a consistent order and so deadlocks are not possible.
+For information on each example, check out the doc at the top of the file.
 
 ## Previous Work
 

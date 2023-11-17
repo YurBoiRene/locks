@@ -1,3 +1,14 @@
+//! A buggy accounting example demonstrating two accounts
+//! (savings and checking) that deposit/withdraw/transfer asynchronously.
+//!
+//! This is a buggy implementation that uses the locks library. Because
+//! the example violates the locking order, it does not compile. The
+//! library prevents the possibility of deadlock at build time.
+//!
+//! See also
+//! - combined-accounts
+//! - combined-accounts-deadlock
+//!
 use locks::prelude::*;
 use std::sync::Arc;
 

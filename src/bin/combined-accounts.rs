@@ -1,3 +1,13 @@
+//! A deadlock-free accounting example demonstrating two accounts
+//! (savings and checking) that deposit/withdraw/transfer asynchronously.
+//!
+//! This is a deadlock free implementation because it uses the locks library
+//! enforcing that locks are taken in a constant order making deadlock impossible.
+//!
+//! See also
+//! - combined-accounts-deadlock
+//! - combined-accounts-out-of-order
+//!
 use locks::prelude::*;
 use std::sync::Arc;
 
