@@ -13,6 +13,8 @@ pub mod prelude {
     };
 }
 
+pub use locks_macros::main;
+
 /// Trait marking a type as a lock level. It should most likely be created with [define_level!]
 pub trait LockLevel {
     type Data;

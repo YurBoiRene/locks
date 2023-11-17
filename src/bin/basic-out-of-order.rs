@@ -5,9 +5,8 @@ define_level!(A);
 define_level!(B);
 order_level!(B < A);
 
+#[locks::main]
 fn main() {
-    let main = &mut unsafe { Handle::new(&MainLevel) }; // TODO
-
     let a = Arc::new(A::new(10));
     let b = Arc::new(B::new(2));
 

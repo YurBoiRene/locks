@@ -88,9 +88,8 @@ impl CombinedAccount {
     }
 }
 
+#[locks::main]
 fn main() {
-    let main = &mut unsafe { Handle::new(&MainLevel) }; // TODO
-
     let jeff = CombinedAccount::new();
     jeff.with_checking(main, |checking| {
         checking.deposit(1_500);

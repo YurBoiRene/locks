@@ -3,13 +3,6 @@
 version = 3
 
 [[package]]
-name = "locks"
-version = "0.1.0"
-dependencies = [
- "locks-macros",
-]
-
-[[package]]
 name = "locks-macros"
 version = "0.1.0"
 dependencies = [
