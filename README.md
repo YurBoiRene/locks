@@ -1,5 +1,7 @@
 # Deadlock Prevention via Rust's Type System
 
+This was a project made for CSE 5349 (Rustworthy Computing) at The Ohio State University by Lennon Anderson, Adrian Vovk, Kyle Rosenberg, and Chris Barlas.
+
 Deadlocks are a common problem in multiprocessing systems that occur when a thread of execution is waiting for the lock of a resource held by another thread of execution, which is in turn, waiting for a resource held by the first thread. For more information on deadlocks, we refer the reader to [Section 32.3 of *Operating Systems: Three Easy Pieces*](https://pages.cs.wisc.edu/~remzi/OSTEP/threads-bugs.pdf).
 
 We introduce `locks`, a crate providing a lock types that ensure deadlock free execution verified at compile time. This is done by enforcing that each thread takes locks in a consistent ordering.
